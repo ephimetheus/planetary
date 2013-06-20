@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Planetary</title>
+	<link rel="stylesheet" media="all" href="css/main.css"></link>
+	
+	<script type="text/javascript" src="js/lib/jquery-2.0.2.min.js"></script>
+	<script type="text/javascript" src="js/lib/fabric.1.1.17.min.js"></script>
+	
+	<script type="text/javascript" src="js/Body.js"></script>
+	<script type="text/javascript" src="js/Planetary.js"></script>
+</head>
+<body>
+	
+<input type="button" id="step" value="step" />
+<input type="button" id="run" value="run" />
+<input type="button" id="stop" value="stop" />
+Zoom:
+<input type="button" id="in" value="+" />
+<input type="button" id="out" value="-" />
+
+<input type="button" id="rand" value="add random planet" />
+<br/>
+
+<script type="text/javascript">
+var planetary = new Planetary({
+	frame: $('body')
+}) ;
+
+for(var i=0;i<9;i++) {
+	planetary.addRandom(true) ;
+}
+
+$('#step').click(function() {
+	planetary.tick() ;
+}) ;
+
+$('#run').click(function() {
+	planetary.run() ;
+}) ;
+
+$('#stop').click(function() {
+	planetary.stop() ;
+}) ;
+
+var zoomInc = 2 ;
+
+$('#in').click(function() {
+	planetary.zoom(zoomInc) ;
+}) ;
+
+$('#out').click(function() {
+	planetary.zoom(1/zoomInc) ;
+}) ;
+
+$(window).bind('mousewheel', function(e) {
+	if(e.originalEvent.wheelDelta > 0) {
+	    planetary.zoom(zoomInc) ;
+	}
+	else {
+	   planetary.zoom(1/zoomInc) ;
+	}
+}) ;
+
+var dragged = false ;
+$('#planetary').mousedown(function(e) {
+	var start = e ;
+	e.stopPropagation() ;
+	dragged = false ;
+	
+	$(window).mousemove(function(e) {
+		dragged = true ;
+		planetary.move({x: e.pageX-start.pageX, y: e.pageY-start.pageY}) ;
+		e.stopPropagation() ;
+	}) ;
+	
+}) ;
+/*
+planetary.canvas.on('mouse:down', function(options) {
+  console.log(options.e.clientX, options.e.clientY);
+});*/
+
+$('#planetary').click(function(e) {
+	if(dragged) {
+		return false ;
+	}
+	
+	var body = new Body({name: 'random planet'}) ;
+	body.random() ;
+	planetary.addBody(body) ;
+	
+	var offset = $('#planetary').offset() ;
+	body.position = {
+		x: (e.pageX - offset.left - planetary.options.width/2 + planetary.relativeOffset.x) / planetary.zoomFactor,
+		y: (e.pageY - offset.top - planetary.options.height/2 + planetary.relativeOffset.y) / planetary.zoomFactor
+	} ;
+	
+	body.orbit(planetary.sun) ;
+	
+	planetary.render() ;
+	
+}) ;
+
+$('#planetary').mouseup(function() {
+	planetary.lockMove() ;
+	$(window).unbind('mousemove') ;
+}) ;
+
+$('#rand').click(function() {
+	planetary.addRandom(true) ;
+}) ;
+
+
+
+</script>
+</body>
+</html>
