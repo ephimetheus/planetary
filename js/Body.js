@@ -2,6 +2,8 @@ window.Body = function(params) {
 	this.position = params.position ;
 	this.params = params ;
 	this.gravConst = 50 ;
+	this.maxMass = 800 ;
+	this.age = 0 ;
 
 	this.velocity = {x:0,y:0} ;
 	if(typeof this.params.velocity !== 'undefined') {
@@ -27,6 +29,8 @@ window.Body = function(params) {
 		radius: this.radius, 
 		fill: params.color,
 	}) ;
+	
+	this.label = new Label(this) ;
 } ;
 
 Body.prototype.calculateInteractionWith = function(otherBody) {
@@ -45,24 +49,20 @@ Body.prototype.calculateInteractionWith = function(otherBody) {
 	} ;
 } ;
 
-Body.prototype.random = function() {
-	var colors = [
-		'red',
-		'green',
-		'blue',
-		'purple',
-		'black',
-		'grey',
-		'cyan',
-		'yellow'
-	] ;
-	
-	this.mass = Math.floor(Math.random()*400) ;
+Body.prototype.calculateRadius = function() {
+	this.radius = (1 - Math.exp(-this.mass/1000)) * 400 + 40 ;
 	
 	this.shape.set({
-		fill: colors[parseInt(Math.floor(Math.random()*colors.length)-1)],
-		radius: this.mass/400 * 100 + 15
+		radius: this.radius
 	}) ;
+} ;
+
+Body.prototype.random = function() {
+	this.mass = Math.floor(Math.random()*this.maxMass) ;
+	
+	this.setRandomColor() ;
+	
+	this.calculateRadius() ;
 	
 	this.position = {
 		x: Math.floor(Math.random()*2500) - Math.floor(Math.random()*2500) + 400,
@@ -73,6 +73,30 @@ Body.prototype.random = function() {
 		x: Math.floor(Math.random()*40) - Math.floor(Math.random()*40),
 		y: Math.floor(Math.random()*40) - Math.floor(Math.random()*40)
 	} ;
+} ;
+
+Body.prototype.setRandomColor = function() {
+	var colors = [
+		'red',
+		'green',
+		'blue',
+		'purple',
+		'black',
+		'grey',
+		'violet',
+		'tan',
+		'olive',
+		'gold',
+		'cyan',
+		'aqua',
+		'tomato',
+		'yellowgreen'
+	] ;
+	
+	this.params.color = colors[parseInt(Math.floor(Math.random()*colors.length))] ;
+	this.shape.set({
+		fill: this.params.color
+	}) ;
 } ;
 
 Body.prototype.orbit = function(sun) {
@@ -87,13 +111,20 @@ Body.prototype.orbit = function(sun) {
 	} ;
 	
 	this.velocity = {
-		x: unit.x * velo,
-		y: unit.y * velo
+		x: unit.x * velo + sun.velocity.x,
+		y: unit.y * velo + sun.velocity.y
 	}
 
 } ;
 
-Body.prototype.intersect = function() {
+Body.prototype.intersect = function(other) {
+	if(this.age<20) {
+		return false ;
+	}
+	
+	var dist = this.calculateDistanceTo(other) ;
+	
+	return dist.total < this.radius+other.radius ;
 } ;
 
 Body.prototype.calculateDistanceTo = function(otherBody) {
@@ -114,7 +145,18 @@ Body.prototype.updatePosition = function() {
 	} ;
 } ;
 
+Body.prototype.setColor = function(color) {
+	this.params.color = color ;
+	
+	this.shape.set({
+		color: this.params.color
+	}) ;
+	
+} ;
+
 Body.prototype.draw = function(zoom, offset) {
+	this.age++;
+	
 	this.shape.set({
 		left: this.position.x * zoom + offset.x,
 		top: this.position.y * zoom + offset.y
@@ -122,6 +164,13 @@ Body.prototype.draw = function(zoom, offset) {
 	
 	this.shape.scaleX = zoom ;
 	this.shape.scaleY = zoom ;
+	
+	this.label.draw(zoom, offset) ;
+} ;
+
+Body.prototype.destroy = function(canvas) {
+	canvas.remove(this.shape) ;
+	canvas.remove(this.label.shape) ;
 } ;
 
 Body.prototype.getShape = function() {
@@ -138,5 +187,9 @@ Body.prototype.getMass = function() {
 
 Body.prototype.setZoom = function(zoom) {
 	this.zoom = zoom ;
+} ;
+
+Body.prototype.getColor = function() {
+	return this.params.color ;
 } ;
 

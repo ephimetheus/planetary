@@ -8,29 +8,71 @@
 	<script type="text/javascript" src="js/lib/jquery-2.0.2.min.js"></script>
 	<script type="text/javascript" src="js/lib/fabric.1.1.17.min.js"></script>
 	
+	<script type="text/javascript" src="js/Label.js"></script>
 	<script type="text/javascript" src="js/Body.js"></script>
 	<script type="text/javascript" src="js/Planetary.js"></script>
+	
+	<script type="text/javascript" src="scenarios/regular.js"></script>
 </head>
 <body>
 	
 <input type="button" id="step" value="step" />
 <input type="button" id="run" value="run" />
 <input type="button" id="stop" value="stop" />
+|
 Zoom:
 <input type="button" id="in" value="+" />
 <input type="button" id="out" value="-" />
-
+|
 <input type="button" id="rand" value="add random planet" />
+| sun mass: 
+<input type="button" id="sunplus" value="+1000" />
+<input type="button" id="sunminus" value="-1000" />
+<input type="button" id="sunmult" value="*10" />
+<input type="button" id="sundiv" value="/10" />
+| 
+<input type="button" id="clear" value="clear" />
+| bodies: <span id="bodies"></span>
 <br/>
 
 <script type="text/javascript">
 var planetary = new Planetary({
-	frame: $('body')
+	frame: $('body'),
+	onBodyAdd: function() {
+		$('#bodies').html(this.bodies.length) ;
+	},
+	onBodyRemove: function() {
+		$('#bodies').html(this.bodies.length) ;
+	}
 }) ;
 
-for(var i=0;i<9;i++) {
+/*for(var i=0;i<1;i++) {
 	planetary.addRandom(true) ;
-}
+}*/
+
+$('#clear').click(function() {
+	planetary.clear() ;
+}) ;
+
+$('#sunplus').click(function() {
+	var sun = planetary.sun ;
+	sun.mass = sun.mass + 1000 ;
+}) ;
+
+$('#sunminus').click(function() {
+	var sun = planetary.sun ;
+	sun.mass = sun.mass - 1000 ;
+}) ;
+
+$('#sunmult').click(function() {
+	var sun = planetary.sun ;
+	sun.mass = sun.mass * 10 ;
+}) ;
+
+$('#sundiv').click(function() {
+	var sun = planetary.sun ;
+	sun.mass = sun.mass / 10 ;
+}) ;
 
 $('#step').click(function() {
 	planetary.tick() ;
@@ -91,12 +133,23 @@ $('#planetary').click(function(e) {
 	planetary.addBody(body) ;
 	
 	var offset = $('#planetary').offset() ;
+
 	body.position = {
-		x: (e.pageX - offset.left - planetary.options.width/2 + planetary.relativeOffset.x) / planetary.zoomFactor,
-		y: (e.pageY - offset.top - planetary.options.height/2 + planetary.relativeOffset.y) / planetary.zoomFactor
+		x: (e.pageX - offset.left - planetary.options.width/2 - planetary.relativeOffset.x) / planetary.zoomFactor,
+		y: (e.pageY - offset.top - planetary.options.height/2 - planetary.relativeOffset.y) / planetary.zoomFactor
 	} ;
 	
-	body.orbit(planetary.sun) ;
+	var closestDistance = body.calculateDistanceTo(planetary.suns[0]).total ;
+	var closest = planetary.suns[0] ;
+	// calculate nearest sun:
+	for(var i = 1;i<planetary.suns.length;i++) {
+		var dist = body.calculateDistanceTo(planetary.suns[i]).total ;
+		if(dist < closestDistance) {
+			closest = planetary.suns[i] ;
+		}
+	}	
+	
+	body.orbit(closest) ;
 	
 	planetary.render() ;
 	
