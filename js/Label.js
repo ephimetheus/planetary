@@ -5,8 +5,6 @@ window.Label = function(body) {
 		textAlign: 'left',
 		lineHeight:0.9
 	}) ;
-
-
 } ;
 
 Label.prototype.getShape = function() {
@@ -15,10 +13,17 @@ Label.prototype.getShape = function() {
 
 Label.prototype.draw = function(zoom, offset) {
 	// update text
-	this.shape.setText(this.body.getName()
-	+"\n"
-	+"v="+(Math.round(Math.sqrt(this.body.velocity.x*this.body.velocity.x + this.body.velocity.y*this.body.velocity.y)))
-	+", m="+this.body.mass+", r="+Math.round(this.body.radius*10)/10) ;
+	if(window.planetary.options.labelsVisible) {
+		this.shape.setText(this.body.getName()
+		+"\n"
+		+"v="+(Math.round(Math.sqrt(this.body.velocity.x*this.body.velocity.x + this.body.velocity.y*this.body.velocity.y)*10)/10)
+		+", m="+this.body.mass+", r="+Math.round(this.body.radius*10)/10
+		+"\n"
+		+"x="+Math.round(this.body.position.x*10)/10+", y="+Math.round(this.body.position.y*10)/10) ;
+	}
+	else {
+		this.shape.setText('') ;
+	}
 
 	this.shape.set({
 		left: (this.body.position.x) * zoom + this.body.radius*zoom + offset.x + this.shape.getWidth()/2 + 20,

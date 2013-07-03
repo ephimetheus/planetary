@@ -13,6 +13,8 @@
 	<script type="text/javascript" src="js/Planetary.js"></script>
 	
 	<script type="text/javascript" src="scenarios/regular.js"></script>
+	<script type="text/javascript" src="scenarios/collision.js"></script>
+	<script type="text/javascript" src="scenarios/binary.js"></script>
 </head>
 <body>
 	
@@ -23,21 +25,50 @@
 Zoom:
 <input type="button" id="in" value="+" />
 <input type="button" id="out" value="-" />
+
 |
-<input type="button" id="rand" value="add random planet" />
-| sun mass: 
-<input type="button" id="sunplus" value="+1000" />
-<input type="button" id="sunminus" value="-1000" />
-<input type="button" id="sunmult" value="*10" />
-<input type="button" id="sundiv" value="/10" />
+labels:
+<input type="radio" name="labels" id="labels_on" value="true" /> <label for="labels_on">show</label>
+<input type="radio" name="labels" id="labels_off" value="false" checked="checked"/> <label for="labels_off">hide</label>
 | 
+fps:
+<select name="fps" id="fps">
+	<option value="30">30</option>
+	<option value="60">60</option>
+	<option value="200">200</option>
+	<option value="500">500</option>
+	<option value="1000">1000</option>
+</select>
+
+|
 <input type="button" id="clear" value="clear" />
 | bodies: <span id="bodies"></span>
 <br/>
 
+<div id="frame"></div>
+
+click in space to add planet with <input type="text" id="mass" value="200" /> mass of color 
+<select id="color">
+	<option name="red">red</option>
+	<option name="green">green</option>
+	<option name="blue">blue</option>
+	<option name="purple">purple</option>
+	<option name="black">black</option>
+	<option name="grey">grey</option>
+	<option name="violet">violet</option>
+	<option name="tan">tan</option>
+	<option name="olive">olive</option>
+	<option name="gold">gold</option>
+	<option name="cyan">cyan</option>
+	<option name="aqua">aqua</option>
+	<option name="tomato">tomato</option>
+	<option name="yellowgreen">yellowgreen</option>
+	<option name="yellow">yellow</option>
+</select>, orbiting <span id="selected">the closest sun</span>
+
 <script type="text/javascript">
-var planetary = new Planetary({
-	frame: $('body'),
+window.planetary = new Planetary({
+	frame: $('#frame'),
 	onBodyAdd: function() {
 		$('#bodies').html(this.bodies.length) ;
 	},
@@ -46,12 +77,38 @@ var planetary = new Planetary({
 	}
 }) ;
 
+planetary.fromObject(planetary.scenario.binary) ;
+//planetary.fromObject(planetary.scenario.collision) ;
+
 /*for(var i=0;i<1;i++) {
 	planetary.addRandom(true) ;
 }*/
 
+$('#fps').change(function() {
+	var fps = parseInt($(this).find(':selected').val()) ;
+	
+	planetary.options.fps = fps ;
+	
+	if(planetary.running) {
+		planetary.stop() ;
+		planetary.run() ;
+	}
+	
+}) ;
+
+$('#labels_on').click(function() {
+	planetary.setLabelsVisible(true) ;
+}) ;
+
+$('#labels_off').click(function() {
+	planetary.setLabelsVisible(false) ;
+}) ;
+
+
+
 $('#clear').click(function() {
 	planetary.clear() ;
+	selected = null ;
 }) ;
 
 $('#sunplus').click(function() {
@@ -103,6 +160,8 @@ $(window).bind('mousewheel', function(e) {
 	else {
 	   planetary.zoom(1/zoomInc) ;
 	}
+	
+	e.stopPropagation() ;
 }) ;
 
 var dragged = false ;
@@ -123,16 +182,52 @@ planetary.canvas.on('mouse:down', function(options) {
   console.log(options.e.clientX, options.e.clientY);
 });*/
 
+window.selected = null ;
 $('#planetary').click(function(e) {
 	if(dragged) {
 		return false ;
 	}
+
+	var offset = $('#planetary').offset() ;
+
+	var position = {
+		x: (e.pageX - offset.left - planetary.options.width/2 - planetary.relativeOffset.x) / planetary.zoomFactor,
+		y: (e.pageY - offset.top - planetary.options.height/2 - planetary.relativeOffset.y) / planetary.zoomFactor
+	} ;
 	
-	var body = new Body({name: 'random planet'}) ;
-	body.random() ;
+	// check if we have clicked a body
+	var newSelected = null
+	for(var i=0;i<planetary.bodies.length;i++) {
+		var delta = {
+			x: Math.abs(planetary.bodies[i].position.x-position.x),
+			y: Math.abs(planetary.bodies[i].position.y-position.y)
+		} ;
+		
+		if(Math.sqrt(delta.x*delta.x + delta.y*delta.y) < planetary.bodies[i].radius) {
+			selected = planetary.bodies[i] ;
+			$('#selected').html(window.selected.getName()) ;
+			return false ;
+		}
+		
+	}
+	
+	/*if(newSelected !== null) {
+		window.selected = newSelected  ;
+		$('#selected').html(window.selected.getName()) ;
+		return false ;
+	}*/
+	
+	var body = new Body({
+		name: 'random planet',
+		mass: parseInt($('#mass').val()),
+		color: $('#color option:selected').val()
+	}) ;
+	
+	body.calculateRadius() ;
+	//body.random() ;
+	
 	planetary.addBody(body) ;
 	
-	var offset = $('#planetary').offset() ;
 
 	body.position = {
 		x: (e.pageX - offset.left - planetary.options.width/2 - planetary.relativeOffset.x) / planetary.zoomFactor,
@@ -141,15 +236,40 @@ $('#planetary').click(function(e) {
 	
 	var closestDistance = body.calculateDistanceTo(planetary.suns[0]).total ;
 	var closest = planetary.suns[0] ;
-	// calculate nearest sun:
-	for(var i = 1;i<planetary.suns.length;i++) {
-		var dist = body.calculateDistanceTo(planetary.suns[i]).total ;
-		if(dist < closestDistance) {
-			closest = planetary.suns[i] ;
-		}
-	}	
 	
-	body.orbit(closest) ;
+	var self = planetary.bodies.indexOf(body) ;
+		
+	// calculate nearest sun:
+	if(selected !== null) {
+		body.orbit(selected) ;
+	}
+	else {
+		if(planetary.suns.langth > 0) {
+			for(var i = 1;i<planetary.suns.length;i++) {
+			   var dist = body.calculateDistanceTo(planetary.suns[i]).total ;
+			   if(dist < closestDistance) {
+				   closest = planetary.suns[i] ;
+			   }
+			}
+		
+			body.orbit(closest) ;
+		}
+	}
+	
+	/*for(var i = 1;i<planetary.bodies.length;i++) {
+		if(i === self) {
+			continue; 
+		}
+		
+		var dist = body.calculateDistanceTo(planetary.bodies[i]).total ;
+		if(dist < closestDistance) {
+			closest = planetary.bodies[i] ;
+		}
+	}*/
+	
+	
+	
+	//console.log('closest:' +closest.getName()) ;
 	
 	planetary.render() ;
 	
@@ -160,9 +280,9 @@ $('#planetary').mouseup(function() {
 	$(window).unbind('mousemove') ;
 }) ;
 
-$('#rand').click(function() {
+/*$('#rand').click(function() {
 	planetary.addRandom(true) ;
-}) ;
+}) ;*/
 
 
 

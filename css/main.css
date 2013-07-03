@@ -8,3 +8,7 @@ body {
 	border:1px solid #000000;
 	cursor:move;
 }
+
+#mass {
+	width:50px;
+}

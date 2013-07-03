@@ -1,19 +1,21 @@
 window.Planetary = function(options) {
 	this.options = $.extend({
-		fps: 30,
-		width:1500,
-		height:850,
+		fps: 60,
+		width:1300,
+		height:800,
 		onBodyAdd: function() {},
-		onBodyRemove: function() {}
+		onBodyRemove: function() {},
+		labelsVisible: false
 	}, options) ;
 	
 	this.collisionMassThreshold = 10 ;
 	this.mergeMassThreshold = 10 ;
 	this.bodyLimit = 150 ;
 	
-	
 	this.running = false ;
-	this.zoomFactor = 1/16 ;	
+	
+	this.zoomFactor = 1/32 ;
+		
 	this.offset = {
 		y: this.options.height/2,
 		x: this.options.width/2
@@ -38,11 +40,14 @@ window.Planetary = function(options) {
 	this.canvas.setHeight(this.options.height) ;
 	this.canvas.setWidth(this.options.width) ;
 	
-	this.fromObject(this.scenario.regular) ;
-	
 	this.render() ;
 	
 	//this.run() ;
+} ;
+
+Planetary.prototype.setLabelsVisible = function(enabled) {
+	this.options.labelsVisible = enabled ;
+	this.render() ;
 } ;
 
 Planetary.prototype.fromObject = function(scenario) {
@@ -58,6 +63,8 @@ Planetary.prototype.fromObject = function(scenario) {
 		newBody.calculateRadius() ;
 		self.addBody(newBody) ;
 	}) ;
+	
+	this.render() ;
 } ;
 
 Planetary.prototype.addSun = function(sun) {
@@ -70,7 +77,7 @@ Planetary.prototype.addRandom = function(orbit) {
 	body.random() ;
 	
 	if(orbit === true) {
-		body.orbit(this.sun) ;
+		body.orbit(this.suns[Math.floor(Math.random(this.suns.length))]) ;
 	}
 	
 	this.addBody(body) ;
@@ -86,19 +93,41 @@ Planetary.prototype.run = function() {
 	this.running = true ;
 	
 	var self = this ;
-	this.interval = setInterval(function() {
+	/*this.interval = setInterval(function() {
 		
 		self.tick() ;
 		
-	}, 1000/this.options.fps) ;
+	}, 1000/this.options.fps) ;*/
+	
+	/*this.clearInterval = setInterval(function() {
+		
+		console.log('clear') ;
+		self.reattach() ;
+		
+	}, 1000/this.options.fps*60) ;*/
+		
+	this.scheduleTick() ;
+			
 } ;
 
+Planetary.prototype.scheduleTick = function() {
+	var self = this ;
+	this.timeout = setTimeout(function() {
+		
+			self.tick() ;
+			self.scheduleTick() ;
+		
+	}, 1000/this.options.fps) ;
+}
+
 Planetary.prototype.stop = function() {
-	clearInterval(this.interval) ;
+	clearTimeout(this.timeout) ;
 	this.running = false ;
 } ;
 
 Planetary.prototype.tick = function() {
+	var self = this ;
+	
 	var remove = [] ;
 	var debris = [] ;
 	var merge = [] ;
@@ -115,20 +144,23 @@ Planetary.prototype.tick = function() {
 			if(this.bodies[i].intersect(this.bodies[j])) {
 				// calculate mass difference and use threshold to determine if debris has to be spawned
 				if(this.bodies[i].getMass()/this.collisionMassThreshold > this.bodies[j].getMass()) {
+					//this.bodies[j].remove = true ;
 					continue;
 				}
 				
+				console.log('intersect') ;
+				
 				// calculate if bodies are of similar mass to determine if to merge them
-				if(Math.abs(this.bodies[i].getMass()-this.bodies[j].getMass())/this.bodies[i].getMass() < 0.1) {
+				/*if(Math.abs(this.bodies[i].getMass()-this.bodies[j].getMass())/this.bodies[i].getMass() < 0.1) {
 					if(mergeBlock.indexOf(i) === -1 && mergeBlock.indexOf(j) === -1) {
 						merge.push([i, j]) ;
 						mergeBlock.push(i) ;
 						mergeBlock.push(j) ;
 					}
 					continue;
-				}
+				}*/
 				
-				remove.push(this.bodies[i]) ;
+				this.bodies[i].remove = true ;
 				debris.push(this.bodies[i]) ;	
 				continue;		
 			}
@@ -137,26 +169,46 @@ Planetary.prototype.tick = function() {
 		}
 	}
 	
-	for(var y=0;y<merge.length;y++) {
+	var oldBodies = this.bodies ;
+	this.bodies = [] ;
+	
+	for(var y=0;y<oldBodies.length;y++) {
+		if(oldBodies[y].remove) {
+			oldBodies[y].destroy(this.canvas) ;
+		}
+		else {
+			this.bodies.push(oldBodies[y]) ;
+		}
+	}
+	
+	/*for(var y=0;y<merge.length;y++) {
 		this.mergeBodies(this.bodies[merge[y][0]], this.bodies[merge[y][1]]) ;
 		remove.push(this.bodies[merge[y][0]]) ;
 		remove.push(this.bodies[merge[y][1]]) ;
-	}
+	}*/
 	
-	for(var y=0;y<remove.length;y++) {
+	/*for(var y=0;y<remove.length;y++) {
 		this.bodies.splice(this.bodies.indexOf(remove[y]), 1) ;
 		remove[y].destroy(this.canvas) ;
-	}
+	}*/
 	
 	for(var k=0;k<debris.length;k++) {
 		this.spawnDebris(debris[k]) ;
-	}	
+	}
 	
 	for(var i=0;i<this.bodies.length;i++) {
 		this.bodies[i].updatePosition() ;
 	}
 		
 	this.render() ;
+} ;
+
+Planetary.prototype.reattach = function() {
+	this.canvas.clear() ;
+
+	for(var i=0;i<this.bodies.length;i++) {
+		this.bodies[i].attach(this.canvas) ;
+	}
 } ;
 
 Planetary.prototype.mergeBodies = function(body1, body2) {
@@ -186,7 +238,7 @@ Planetary.prototype.spawnDebris = function(body) {
 		return;
 	}
 	
-	if(body.getMass() < 50) {
+	if(body.getMass() < 90) {
 		// body is too small for debris
 		return;
 	}
@@ -197,7 +249,7 @@ Planetary.prototype.spawnDebris = function(body) {
 		return;
 	}
 	
-	var numDebris = Math.ceil(Math.random()*3)+2 ;
+	var numDebris = Math.ceil(Math.random()*3)+1 ;
 	
 	for(var i=0;i<numDebris;i++) {
 		var newBody = new Body({name: body.getName() + ' debris'}) ;
@@ -242,8 +294,10 @@ Planetary.prototype.clear = function() {
 
 Planetary.prototype.addBody = function(body) {
 	this.bodies.push(body) ;
-	this.canvas.add(body.getShape()) ;
-	this.canvas.add(body.label.getShape()) ;
+	
+	body.planetary = this ;
+	
+	body.attach(this.canvas) ;
 	
 	this.options.onBodyAdd.call(this) ;
 } ;

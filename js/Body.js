@@ -4,6 +4,8 @@ window.Body = function(params) {
 	this.gravConst = 50 ;
 	this.maxMass = 800 ;
 	this.age = 0 ;
+	this.planetary = null ;
+	this.remove = false ;
 
 	this.velocity = {x:0,y:0} ;
 	if(typeof this.params.velocity !== 'undefined') {
@@ -31,6 +33,11 @@ window.Body = function(params) {
 	}) ;
 	
 	this.label = new Label(this) ;
+} ;
+
+Body.prototype.attach = function(canvas) {
+	canvas.add(this.shape) ;
+	canvas.add(this.label.shape) ;
 } ;
 
 Body.prototype.calculateInteractionWith = function(otherBody) {
@@ -155,8 +162,10 @@ Body.prototype.setColor = function(color) {
 } ;
 
 Body.prototype.draw = function(zoom, offset) {
-	this.age++;
-	
+	if(this.age<500) {
+		this.age++;
+	}
+
 	this.shape.set({
 		left: this.position.x * zoom + offset.x,
 		top: this.position.y * zoom + offset.y
