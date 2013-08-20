@@ -33,6 +33,11 @@ window.Body = function(params) {
 	}) ;
 	
 	this.label = new Label(this) ;
+	this.selected = false ;
+} ;
+
+Body.prototype.select = function() {
+	this.selected = true ;
 } ;
 
 Body.prototype.attach = function(canvas) {
@@ -181,6 +186,14 @@ Body.prototype.destroy = function(canvas) {
 	canvas.remove(this.shape) ;
 	canvas.remove(this.label.shape) ;
 } ;
+
+Body.prototype.select = function() {
+	this.shape.set({ strokeWidth: 100, stroke: 'rgba(255,255,255,1)' });
+}
+
+Body.prototype.unselect = function() {
+	this.shape.set({ strokeWidth: 0});
+}
 
 Body.prototype.getShape = function() {
 	return this.shape ;

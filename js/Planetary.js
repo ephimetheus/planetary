@@ -2,7 +2,7 @@ window.Planetary = function(options) {
 	this.options = $.extend({
 		fps: 60,
 		width:1300,
-		height:800,
+		height:700,
 		onBodyAdd: function() {},
 		onBodyRemove: function() {},
 		labelsVisible: false
@@ -93,21 +93,10 @@ Planetary.prototype.run = function() {
 	this.running = true ;
 	
 	var self = this ;
-	/*this.interval = setInterval(function() {
-		
+
+	this.requestId = window.requestAnimationFrame(function() {
 		self.tick() ;
-		
-	}, 1000/this.options.fps) ;*/
-	
-	/*this.clearInterval = setInterval(function() {
-		
-		console.log('clear') ;
-		self.reattach() ;
-		
-	}, 1000/this.options.fps*60) ;*/
-		
-	this.scheduleTick() ;
-			
+	}) ;			
 } ;
 
 Planetary.prototype.scheduleTick = function() {
@@ -121,7 +110,8 @@ Planetary.prototype.scheduleTick = function() {
 }
 
 Planetary.prototype.stop = function() {
-	clearTimeout(this.timeout) ;
+	window.cancelAnimationFrame(this.requestId) ;
+	
 	this.running = false ;
 } ;
 
@@ -148,7 +138,7 @@ Planetary.prototype.tick = function() {
 					continue;
 				}
 				
-				console.log('intersect') ;
+				//console.log('intersect') ;
 				
 				// calculate if bodies are of similar mass to determine if to merge them
 				/*if(Math.abs(this.bodies[i].getMass()-this.bodies[j].getMass())/this.bodies[i].getMass() < 0.1) {
@@ -201,6 +191,10 @@ Planetary.prototype.tick = function() {
 	}
 		
 	this.render() ;
+	
+	this.requestId = window.requestAnimationFrame(function() {
+		self.tick() ;
+	}) ;	
 } ;
 
 Planetary.prototype.reattach = function() {

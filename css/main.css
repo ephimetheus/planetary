@@ -1,14 +1,28 @@
 body {
-	
+	padding:0px 10px 0px 10px;
 }
 
 #planetary {
 	width:1000px;
-	height:600px;
+	height:400px;
 	border:1px solid #000000;
 	cursor:move;
 }
 
 #mass {
 	width:50px;
+}
+
+#top-form {
+	padding:0px;
+}
+
+.page-header > h1 {
+	margin:0px;
+}
+
+#frame > canvas {
+	
+	background:url(../img/bg.png);
+	
 }
